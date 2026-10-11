@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   if ((await getViewer()).kind !== "staff") return new Response("Forbidden", { status: 403 });
 
   const filter = parseBuyerFilter(Object.fromEntries(new URL(request.url).searchParams));
-  const rows = await loadBuyers(filter, 5000);
+  const { rows } = await loadBuyers(filter, 5000);
   const csv = toCsv([
     [...th.staff.buyers.csvHeader],
     ...rows.map((r) => [

@@ -54,7 +54,8 @@ test("staff finds a slip to review via the tab and gets back to the filtered lis
   await expect(staff.getByRole("link", { name: /^รอตรวจสอบ/ })).toHaveAttribute("aria-current", "page"); // tabs survive a form submit
   await staff.screenshot({ path: info.outputPath("2-buyers-filtered.png"), fullPage: true });
 
-  await row.getByRole("link", { name: "เปิด" }).click();
+  await expect(staff.getByText("พบ 1 รายการ")).toBeVisible();
+  await row.click(); // the whole card opens the order
   await expect(staff).toHaveURL(/\/dashboard\/orders\/.+\?back=/);
   await staff.getByRole("link", { name: "← กลับ" }).click();
   await expect(staff).toHaveURL(new RegExp(`/dashboard/buyers\\?q=${studentId}&status=needs_review&year=3$`));

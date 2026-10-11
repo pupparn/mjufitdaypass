@@ -1,3 +1,4 @@
+import { ChevronRight, Download, X } from "lucide-react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,23 +8,27 @@ import { BUYER_STATUSES, buyerQuery, parseBuyerFilter } from "@/lib/buyer-filter
 import { loadBuyers } from "@/lib/buyers";
 import { FACULTIES, YEARS_OF_STUDY } from "@/lib/registration";
 import { formatBaht } from "@/lib/sales";
+import { dmy } from "@/lib/time";
 import { th } from "@/messages/th";
+import { DateField } from "./date-field";
 
 const LIMIT = 200;
 const SELECT = "h-9 rounded-md border border-input bg-transparent px-2 text-sm";
-// Status colours; pending/expired (only reachable by search) stay muted.
-const STATUS_COLOR: Record<string, string> = {
-  paid: "text-emerald-600 dark:text-emerald-400",
-  needs_review: "text-amber-600 dark:text-amber-400",
-  rejected: "text-destructive",
+const BADGE = "rounded-full px-2 py-0.5 text-xs font-medium";
+// Status badges; pending/expired (only reachable by search) stay muted.
+const STATUS_BADGE: Record<string, string> = {
+  paid: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
+  needs_review: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
+  rejected: "bg-destructive/10 text-destructive",
 };
-const REFUND_DUE = "font-medium text-violet-600 dark:text-violet-400";
-const REFUNDED = "text-sky-600 dark:text-sky-400";
+const MUTED_BADGE = "bg-muted text-muted-foreground";
+const REFUND_DUE = "bg-violet-100 text-violet-800 dark:bg-violet-500/15 dark:text-violet-300";
+const REFUNDED = "bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300";
 
 export default async function BuyersPage({ searchParams }: PageProps<"/dashboard/buyers">) {
   await requireArea("staff");
   const f = parseBuyerFilter(await searchParams);
-  const rows = await loadBuyers(f, LIMIT);
+  const { rows, total } = await loadBuyers(f, LIMIT);
   const query = buyerQuery(f);
   const here = `/dashboard/buyers${query && `?${query}`}`;
   const b = th.staff.buyers;
@@ -38,6 +43,12 @@ export default async function BuyersPage({ searchParams }: PageProps<"/dashboard
         <div className="flex gap-2">
           <Input name="q" defaultValue={f.q} placeholder={b.search} />
           <Button type="submit">{b.filter}</Button>
+          {query && (
+            <Link href="/dashboard/buyers" className={buttonVariants({ variant: "outline" })}>
+              <X />
+              {b.clear}
+            </Link>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <select name="status" defaultValue={f.status} className={SELECT} aria-label={th.staff.order.status}>
@@ -63,58 +74,56 @@ export default async function BuyersPage({ searchParams }: PageProps<"/dashboard
               </option>
             ))}
           </select>
-          <label className="flex items-center gap-1">
-            {b.from}
-            <input type="date" name="from" defaultValue={f.from} className={SELECT} />
-          </label>
-          <label className="flex items-center gap-1">
-            {b.to}
-            <input type="date" name="to" defaultValue={f.to} className={SELECT} />
-          </label>
-          {query && (
-            <Link href="/dashboard/buyers" className="text-muted-foreground underline-offset-2 hover:underline">
-              {b.clear}
-            </Link>
-          )}
+          <DateField name="from" label={b.from} defaultValue={f.from} className={SELECT} />
+          <DateField name="to" label={b.to} defaultValue={f.to} className={SELECT} />
           <Link
             href={`/dashboard/buyers/export${query && `?${query}`}`}
             prefetch={false}
-            className={`${buttonVariants({ variant: "outline", size: "sm" })} ml-auto`}
+            className={`${buttonVariants({ variant: "outline" })} ml-auto border-foreground/30`}
           >
+            <Download />
             {b.export}
           </Link>
         </div>
       </form>
+      {total > 0 && <p className="text-sm text-muted-foreground">{b.found(total)}</p>}
       <Card>
         <CardContent className="flex flex-col gap-2 pt-4">
           {rows.length === 0 && <p className="text-sm text-muted-foreground">{b.empty}</p>}
           {rows.map((r) => (
-            <div key={r.id} className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
-              <div>
-                <Link
-                  href={`/dashboard/buyers?${buyerQuery({ q: r.profiles?.student_id ?? "" })}`}
-                  className="font-medium underline-offset-2 hover:underline"
-                >
-                  {r.profiles?.student_id}
-                </Link>{" "}
-                {r.profiles?.first_name} {r.profiles?.last_name}
-                <p className="text-muted-foreground">
-                  {r.business_date} · {formatBaht(r.amount_satang)} บาท ·{" "}
-                  <span className={STATUS_COLOR[r.status]}>{th.staff.order.statuses[r.status]}</span>
-                  {r.review_reason && r.status !== "paid" && ` · ${th.order.reviewReasons[r.review_reason] ?? r.review_reason}`}
-                  {r.refund_required && !r.refunded_at && <span className={REFUND_DUE}> · {b.refundDue}</span>}
-                  {r.refunded_at && <span className={REFUNDED}> · {b.refunded}</span>}
+            // The order link's ::after covers the card, so a click anywhere opens it; the student ID link sits above.
+            <div
+              key={r.id}
+              className="relative flex items-center justify-between gap-3 rounded-lg border p-3 text-sm transition-colors hover:bg-muted/50 has-[>a:focus-visible]:ring-3 has-[>a:focus-visible]:ring-ring/50"
+            >
+              <div className="flex flex-col gap-1">
+                <p>
+                  <Link
+                    href={`/dashboard/buyers?${buyerQuery({ q: r.profiles?.student_id ?? "" })}`}
+                    className="relative z-10 font-medium underline-offset-2 hover:underline"
+                  >
+                    {r.profiles?.student_id}
+                  </Link>{" "}
+                  {r.profiles?.first_name} {r.profiles?.last_name}
+                </p>
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+                  {dmy(r.business_date)} · {formatBaht(r.amount_satang)} บาท
+                  <span className={`${BADGE} ${STATUS_BADGE[r.status] ?? MUTED_BADGE}`}>{th.staff.order.statuses[r.status]}</span>
+                  {r.refund_required && !r.refunded_at && <span className={`${BADGE} ${REFUND_DUE}`}>{b.refundDue}</span>}
+                  {r.refunded_at && <span className={`${BADGE} ${REFUNDED}`}>{b.refunded}</span>}
+                  {r.review_reason && r.status !== "paid" && <span>{th.order.reviewReasons[r.review_reason] ?? r.review_reason}</span>}
                 </p>
               </div>
               <Link
                 href={`/dashboard/orders/${r.id}?back=${encodeURIComponent(here)}`}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
+                aria-label={`${th.staff.queue.open} ${r.profiles?.student_id ?? ""}`}
+                className="text-muted-foreground outline-none after:absolute after:inset-0 after:rounded-lg"
               >
-                {th.staff.queue.open}
+                <ChevronRight className="size-4" />
               </Link>
             </div>
           ))}
-          {rows.length === LIMIT && <p className="text-xs text-muted-foreground">{b.limit}</p>}
+          {total > rows.length && <p className="text-xs text-muted-foreground">{b.limit}</p>}
         </CardContent>
       </Card>
     </main>
