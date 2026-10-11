@@ -21,16 +21,16 @@ export type BuyerRow = {
 
 /**
  * Orders matching the staff filter. Lists skip pending/expired; a search under "all" finds every status (stuck orders).
- * `total` counts every match, not just the `limit` rows returned.
+ * With `countAll`, `total` counts every match rather than just the `limit` rows returned (an extra count query).
  */
-export async function loadBuyers(f: BuyerFilter, limit: number): Promise<{ rows: BuyerRow[]; total: number }> {
+export async function loadBuyers(f: BuyerFilter, limit: number, countAll = false): Promise<{ rows: BuyerRow[]; total: number }> {
   const byProfile = Boolean(f.q || f.faculty || f.year);
   // !inner turns profile filters into filters on the orders themselves.
   let query = createAdminClient()
     .from("orders")
     .select(
       `id, business_date, amount_satang, status, review_reason, refund_required, refunded_at, profiles${byProfile ? "!inner" : ""}(student_id, first_name, last_name, faculty, year_of_study)`,
-      { count: "exact" },
+      countAll ? { count: "exact" } : undefined,
     );
 
   if (f.status === "refund_due" || (f.status === "all" && !f.q)) query = query.in("status", ["paid", "needs_review", "rejected"]);

@@ -9,6 +9,7 @@ import { loadBuyers } from "@/lib/buyers";
 import { FACULTIES, YEARS_OF_STUDY } from "@/lib/registration";
 import { formatBaht } from "@/lib/sales";
 import { dmy } from "@/lib/time";
+import { cn } from "@/lib/utils";
 import { th } from "@/messages/th";
 import { DateField } from "./date-field";
 
@@ -28,7 +29,7 @@ const REFUNDED = "bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300";
 export default async function BuyersPage({ searchParams }: PageProps<"/dashboard/buyers">) {
   await requireArea("staff");
   const f = parseBuyerFilter(await searchParams);
-  const { rows, total } = await loadBuyers(f, LIMIT);
+  const { rows, total } = await loadBuyers(f, LIMIT, true);
   const query = buyerQuery(f);
   const here = `/dashboard/buyers${query && `?${query}`}`;
   const b = th.staff.buyers;
@@ -44,7 +45,7 @@ export default async function BuyersPage({ searchParams }: PageProps<"/dashboard
           <Input name="q" defaultValue={f.q} placeholder={b.search} />
           <Button type="submit">{b.filter}</Button>
           {query && (
-            <Link href="/dashboard/buyers" className={buttonVariants({ variant: "outline" })}>
+            <Link href="/dashboard/buyers" className={cn(buttonVariants({ variant: "outline" }))}>
               <X />
               {b.clear}
             </Link>
@@ -79,7 +80,7 @@ export default async function BuyersPage({ searchParams }: PageProps<"/dashboard
           <Link
             href={`/dashboard/buyers/export${query && `?${query}`}`}
             prefetch={false}
-            className={`${buttonVariants({ variant: "outline" })} ml-auto border-foreground/30`}
+            className={cn(buttonVariants({ variant: "outline" }), "ml-auto border-foreground/30 dark:border-foreground/30")}
           >
             <Download />
             {b.export}

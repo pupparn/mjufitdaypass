@@ -197,6 +197,7 @@ export const th = {
       filter: "กรอง",
       clear: "ล้างตัวกรอง",
       datePlaceholder: "วว/ดด/ปปปป",
+      dateInvalid: "กรอกวันที่ให้ครบเป็น วว/ดด/ปปปป เช่น 05/10/2026",
       pickDate: "เลือกวันที่จากปฏิทิน",
       allFaculties: "ทุกคณะ",
       allYears: "ทุกชั้นปี",
