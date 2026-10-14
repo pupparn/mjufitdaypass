@@ -19,14 +19,18 @@ export type BuyerRow = {
   } | null;
 };
 
-/** Orders matching the staff filter. Lists skip pending/expired; a search under "all" finds every status (stuck orders). */
-export async function loadBuyers(f: BuyerFilter, limit: number): Promise<BuyerRow[]> {
+/**
+ * Orders matching the staff filter. Lists skip pending/expired; a search under "all" finds every status (stuck orders).
+ * With `countAll`, `total` counts every match rather than just the `limit` rows returned (an extra count query).
+ */
+export async function loadBuyers(f: BuyerFilter, limit: number, countAll = false): Promise<{ rows: BuyerRow[]; total: number }> {
   const byProfile = Boolean(f.q || f.faculty || f.year);
   // !inner turns profile filters into filters on the orders themselves.
   let query = createAdminClient()
     .from("orders")
     .select(
       `id, business_date, amount_satang, status, review_reason, refund_required, refunded_at, profiles${byProfile ? "!inner" : ""}(student_id, first_name, last_name, faculty, year_of_study)`,
+      countAll ? { count: "exact" } : undefined,
     );
 
   if (f.status === "refund_due" || (f.status === "all" && !f.q)) query = query.in("status", ["paid", "needs_review", "rejected"]);
@@ -49,7 +53,7 @@ export async function loadBuyers(f: BuyerFilter, limit: number): Promise<BuyerRo
       ? query.order("created_at")
       : query.order("business_date", { ascending: false }).order("created_at", { ascending: false });
 
-  const { data, error } = await query.limit(limit).returns<BuyerRow[]>();
+  const { data, error, count } = await query.limit(limit).returns<BuyerRow[]>();
   if (error) throw new Error(`buyers: ${error.message}`);
-  return data;
+  return { rows: data, total: count ?? data.length };
 }
